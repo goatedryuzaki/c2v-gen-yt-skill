@@ -74,12 +74,16 @@ for (let a = from; a <= to; a += chunk) {
   }
   rmSync(tmp, { recursive: true, force: true });
   if (copied === 0) {
-    process.stderr.write(`chunk ${a}-${b} produced no frames -- stopping\n`);
-    process.exit(1);
+    // Not fatal: the caller loop covers every chunk once, so a chunk that yields nothing is reported
+    // and the run continues. The gap check at the end decides the exit code.
+    process.stderr.write(`chunk ${a}-${b} produced no frames -- skipping\n`);
+    continue;
   }
 
-  // Frame 0 is always the sacrificial one; duplicate frame 1 so the film does not open on a blank.
-  if (a === 0 && !existsSync(framePath(0)) && existsSync(framePath(1))) {
+  // The first chunk has no room for a lead frame, so frame 0 IS the sacrificial one and comes out
+  // blank. Frame 1 is always identical (one frame of a static hold), so use it for frame 0. This must
+  // overwrite unconditionally: the copy loop above has usually just written the blank frame 0 already.
+  if (a === 0 && existsSync(framePath(1))) {
     copyFileSync(framePath(1), framePath(0));
     process.stdout.write('  frame 0 filled from frame 1 (tab warm-up frame is blank)\n');
   }
@@ -91,4 +95,13 @@ for (let a = from; a <= to; a += chunk) {
 }
 
 process.stdout.write(`\ndone: ${rendered} rendered, ${skipped} skipped, ${((Date.now() - t0) / 60000).toFixed(1)} min\n`);
+
+const gaps = [];
+for (let f = from; f <= to; f++) if (!existsSync(framePath(f))) gaps.push(f);
+if (gaps.length) {
+  process.stderr.write(`WARNING: ${gaps.length} frame(s) still missing: ${gaps.slice(0, 10).join(', ')}${gaps.length > 10 ? ' ...' : ''}\n`);
+  process.stderr.write('re-run the same command to retry them\n');
+  process.exit(1);
+}
+process.stdout.write('all frames present\n');
 process.stdout.write('next: node tools/encode.mjs\n');

@@ -47,9 +47,15 @@ const args = [
   '-hide_banner', '-y',
   '-framerate', '30', '-start_number', String(first), '-i', join(dir, 'element-%d.jpeg'),
   ...(existsSync(audio) ? ['-i', audio] : []),
+  // The JPEG frames are full-range sRGB. Encode as standard limited-range Rec.709 and TAG it, or
+  // players that ignore the range flag show crushed blacks / washed colour on a phone.
+  '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
+  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
   '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
   ...(existsSync(audio) ? ['-c:a', 'aac', '-b:a', '192k'] : []),
-  '-shortest', '-movflags', '+faststart',
+  // Deliberately no -shortest: the voiceover is 65.2 s and the film is 67.5 s (2025 frames), so
+  // -shortest would trim the last 2.3 s of picture. Video decides the length; audio just ends first.
+  '-movflags', '+faststart',
   out,
 ];
 console.log(`encoding ${last - first + 1} frames -> ${out}`);

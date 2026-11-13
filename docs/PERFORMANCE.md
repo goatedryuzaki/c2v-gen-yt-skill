@@ -157,6 +157,25 @@ Fixing (a) and (b) properly means making the composition hold `delayRender` unti
 once. Attempts via `advance()`, `useFrame` and `preserveDrawingBuffer` did not work in this
 Remotion/three version; the workarounds above are reliable.
 
+### Checking a finished render
+
+File size is a poor signal — a blank frame over a dark backdrop still compresses small — so
+`tools/perf/blankcheck.py` looks at the picture: it drops the caption band and measures the colour
+variance of the canvas region. A real shot varies; a failed capture is flat.
+
+```bash
+python tools/perf/blankcheck.py out/frames
+```
+
+A uniform **white** frame is not a defect: `Bridge.tsx` paints a full-white overlay at
+`FLASH_AT..FLASH_AT+3` (`story.ts`), so the shot change at frame 130 is white by design. The tool
+separates the two by mean brightness and ignores the flash.
+
+**c. `-shortest` silently truncates the film.** The voiceover is 65.2 s but the film is 67.5 s
+(2025 frames). With `-shortest` ffmpeg stops at the shorter stream, cutting the last 2.3 s of
+picture. `tools/encode.mjs` therefore lets the video decide the length and the audio simply ends
+first.
+
 ---
 
 ## 6. What is still on the table
