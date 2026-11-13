@@ -55,6 +55,19 @@ Draft pass for checking timing/captions (quarter of the pixels, ~2.5-3x faster):
 npm run frames -- --from=0 --to=2024 --chunk=25 --scale=0.5
 ```
 
+### Splitting the render across machines
+If you have a second PC, it can render frames in parallel and the first machine only encodes:
+```bash
+npm run farm       # this PC: dashboard at http://localhost:4000
+```
+Then on the other machine (no installs: portable Node ZIP + a copy of the project):
+```bash
+node tools/farm/agent.mjs --server=http://<this-pc-ip>:4000 --label="i7 / GT 710" --conc=3
+```
+The agent prints the actual WebGL renderer string it got from the browser, and the dashboard shows
+which machine owns which chunk, with a Start button and a Stop button that finishes the current chunk
+and saves progress. Full guide: **[docs/FARM.md](docs/FARM.md)**.
+
 The 6-second hook showcase:
 ```bash
 npx remotion render src/index.ts RicksClipsShowcase out/showcase.mp4

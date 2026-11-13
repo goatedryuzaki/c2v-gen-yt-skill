@@ -12,6 +12,8 @@
     "frames": "node tools/render-frames.mjs",
     "encode": "node tools/encode.mjs",
     "gpu-check": "remotion render src/index.ts GpuCheck out/gpu --frames=0-1 --concurrency=1 --sequence",
+    "farm": "node tools/farm/server.mjs",
+    "farm:agent": "node tools/farm/agent.mjs",
     "draft": "remotion render src/index.ts RicksClipsFull out/draft.mp4 --scale=0.5 --concurrency=2"
   },
   "keywords": [],

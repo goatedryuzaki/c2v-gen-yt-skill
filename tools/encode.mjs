@@ -40,8 +40,14 @@ if (missing.length) {
 }
 
 const ffmpeg = join('node_modules', '@remotion', 'compositor-win32-x64-msvc', 'ffmpeg.exe');
+// --delivery: same pixels, a fraction of the bitrate, so a weak CPU can decode it in real time.
+// crf 21 + a slower preset is smaller AND cleaner than crf 18 + veryfast, which is what a 53 Mbps
+// master with visible playback stutter is really telling you.
+const delivery = process.argv.includes('--delivery');
+const preset = arg('preset', delivery ? 'medium' : 'veryfast');
+const crf = arg('crf', delivery ? '21' : '18');
 const audio = arg('audio', join('public', 'bridge_voiceover.wav'));
-const out = arg('out', join('out', 'final.mp4'));
+const out = arg('out', join('out', delivery ? 'final_web.mp4' : 'final.mp4'));
 
 const args = [
   '-hide_banner', '-y',
@@ -51,7 +57,8 @@ const args = [
   // players that ignore the range flag show crushed blacks / washed colour on a phone.
   '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
   '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
-  '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
+  '-c:v', 'libx264', '-preset', preset, '-crf', crf, '-pix_fmt', 'yuv420p',
+  ...(delivery ? ['-profile:v', 'high', '-level', '4.1'] : []),
   ...(existsSync(audio) ? ['-c:a', 'aac', '-b:a', '192k'] : []),
   // Deliberately no -shortest: the voiceover is 65.2 s and the film is 67.5 s (2025 frames), so
   // -shortest would trim the last 2.3 s of picture. Video decides the length; audio just ends first.
