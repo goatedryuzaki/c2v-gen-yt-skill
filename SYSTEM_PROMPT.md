@@ -62,15 +62,22 @@ python -c "import wave; f=wave.open('public/bridge_voiceover.wav'); print(round(
 3. Add `<Audio src={staticFile("bridge_voiceover.wav")} />` and `<Captions />`.
 
 ### STAGE 4: DELIVER-AND-VERIFY
-Render stills at shot midpoints to verify lighting, depth-of-field, character card poses, and captions:
+Verify lighting, depth-of-field, character card poses, and captions by rendering a frame with the
+shot tool. **Do not use `npx remotion still`** — it always returns a blank canvas in this project
+(the WebGL canvas has not drawn when the screenshot is taken).
 ```bash
-npx remotion still src/index.ts RicksClipsDemo out/preview.png --frame 60
+npm run shot -- 60
+# -> out/shot-60.jpeg
 ```
+The tool renders two frames and keeps the second, which sidesteps the blank-frame capture bug.
 
 ### STAGE 5: FINAL MP4 RENDER
-Render the finished vertical 1080x1920 @ 30 FPS MP4:
+Render the finished vertical 1080x1920 @ 30 FPS MP4 with the resumable pipeline (see
+`docs/PERFORMANCE.md`):
 ```bash
-npx remotion render src/index.ts RicksClipsDemo out/final.mp4
+npm run frames -- --from=0 --to=2024 --chunk=25
+npm run encode
+# -> out/final.mp4
 ```
 
 ---

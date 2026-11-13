@@ -7,7 +7,12 @@
     "start": "remotion studio",
     "render": "remotion render src/index.ts StoryShort out/video.mp4",
     "still": "remotion still src/index.ts StoryShort out/frame.png",
-    "tts": "python scripts/gemini_tts.py"
+    "tts": "python scripts/gemini_tts.py",
+    "shot": "node tools/perf/shot.mjs",
+    "frames": "node tools/render-frames.mjs",
+    "encode": "node tools/encode.mjs",
+    "gpu-check": "remotion render src/index.ts GpuCheck out/gpu --frames=0-1 --concurrency=1 --sequence",
+    "draft": "remotion render src/index.ts RicksClipsFull out/draft.mp4 --scale=0.5 --concurrency=2"
   },
   "keywords": [],
   "author": "",

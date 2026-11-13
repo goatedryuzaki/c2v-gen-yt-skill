@@ -24,18 +24,43 @@ cd "Story Video Generator"
 npm install
 ```
 
-### 3. Render at 100% Maximum Quality
-To render the full short video with all post-processing effects (Depth Blur, Bloom, Inking, Tone Mapping):
+### 3. Check the GPU is actually being used
+This project must render on the real GPU (`angle`), not SwiftShader — it is the difference between
+~3 hours and ~10 hours for the full film.
 ```bash
-npx remotion render src/index.ts RicksClipsFull out/full_video.mp4
+npm run gpu-check
+# -> out/gpu/element-1.jpeg: look for "Direct3D11", not "SwiftShader"
+```
+Full measurements and the reasoning behind every setting: **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)**.
+
+### 4. Preview a frame
+`npx remotion still` produces a blank canvas in this project. Use the two-frame shot tool instead:
+```bash
+npm run shot -- 352
+# -> out/shot-352.jpeg
 ```
 
-To render the 6-second hook showcase:
+### 5. Render the full film at 100% Maximum Quality
+Renders are chunked and resumable — safe to interrupt, and re-running skips finished chunks:
+```bash
+npm run frames -- --from=0 --to=2024 --chunk=25
+# -> out/frames/element-<n>.jpeg  (every pass on: DOF, bloom, ink, tone mapping, grain)
+
+npm run encode
+# -> out/final.mp4  (1080x1920, h264 crf 18, voiceover muxed in)
+```
+
+Draft pass for checking timing/captions (quarter of the pixels, ~2.5-3x faster):
+```bash
+npm run frames -- --from=0 --to=2024 --chunk=25 --scale=0.5
+```
+
+The 6-second hook showcase:
 ```bash
 npx remotion render src/index.ts RicksClipsShowcase out/showcase.mp4
 ```
 
-### 4. Interactive Studio Preview
+### 6. Interactive Studio Preview
 To open the interactive Remotion Studio in your browser:
 ```bash
 npm start

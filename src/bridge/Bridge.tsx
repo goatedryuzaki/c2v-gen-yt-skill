@@ -6,7 +6,7 @@
 // source; the grade is display-referred, so it comes after tone mapping. Every pixel-sized parameter is specified at
 // 1080x1920 and scaled with the output size, so stills at --scale 0.5 and the 1440x2560 final match.
 // Place changes crossfade by stacking a second canvas for the fade frames; the hook ends on a 4-frame white flash.
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { AbsoluteFill, Audio, continueRender, delayRender, getInputProps, staticFile, useCurrentFrame } from "remotion";
 import { Captions } from "./Captions";
@@ -27,14 +27,19 @@ export const BRIDGE_FRAMES = TOTAL;
 type PostToggles = { ink: boolean; lens: boolean; pre: boolean; bloom: boolean; grade: boolean; grain: boolean };
 const toggles = (): PostToggles => ({ ink: true, lens: true, pre: true, bloom: true, grade: true, grain: true, ...((getInputProps() as { post?: Partial<PostToggles> }).post ?? {}) });
 
-/** Bloom for emissive sources only (depth.md 6.4). Its MIP chain always starts at 540x960 (half of 1080x1920),
+/** Bloom for emissive sources only (depth.md 6.4). Its MIP chain starts at half the output (540x960 at 1080x1920),
  *  whatever the output size, so the glow keeps the same size relative to the frame (e-fold ~30 px at 1080p,
- *  ~1.5 % of the frame height) at 540, 1080 and 1440 widths. ADD blend: HDR-safe (SCREEN darkens values > 1). */
+ *  ~1.5 % of the frame height) at 540, 1080 and 1440 widths. ADD blend: HDR-safe (SCREEN darkens values > 1).
+ *
+ *  Bloom is a low-pass filter by construction (it is only fed pixels brighter than 1.0), so running its pyramid at
+ *  half resolution is invisible at the output while costing a quarter of the fill rate -- this is how every game
+ *  engine does it. `levels` is 5 (not 6) so the widest MIP still spans the same number of *output* pixels as the
+ *  full-resolution chain used to: the glow radius is unchanged, only the texel grid it is built on is coarser. */
 const makeBloom = () => {
-  const b = new BloomEffect({ blendFunction: BlendFunction.ADD, intensity: 0.5, luminanceThreshold: 1.0, luminanceSmoothing: 0.2, mipmapBlur: true, levels: 6, radius: 0.6 });
+  const b = new BloomEffect({ blendFunction: BlendFunction.ADD, intensity: 0.5, luminanceThreshold: 1.0, luminanceSmoothing: 0.2, mipmapBlur: true, levels: 5, radius: 0.6 });
   const mip = b.mipmapBlurPass;
   const setSize = mip.setSize.bind(mip);
-  mip.setSize = (w: number, h: number) => setSize(Math.round((1920 * w) / Math.max(h, 1)), 1920);
+  mip.setSize = (w: number, h: number) => setSize(Math.round((960 * w) / Math.max(h, 1)), 960);
   return b;
 };
 
@@ -43,13 +48,17 @@ const fwd = new THREE.Vector3(), fpt = new THREE.Vector3();
 const useKit = () => {
   const [kit, setKit] = useState<Kit | null>(null);
   const [handle] = useState(() => delayRender("bridge kit"));
-  useEffect(() => { loadKit().then((k) => { setKit(k); continueRender(handle); }); }, [handle]);
+  useEffect(() => { loadKit().then(setKit); }, []);
+  // Release once the tree *with* the kit has committed. Releasing inside the promise let the screenshot through
+  // before <ThreeCanvas> even mounted, so the first frame of every render tab came out as the flat blue backdrop.
+  useEffect(() => { if (kit) continueRender(handle); }, [kit, handle]);
   return kit;
 };
 
 const Inner: React.FC<{ id: number; kit: Kit }> = ({ id, kit }) => {
   const f = useCurrentFrame();
-  const { camera, scene } = useThree();
+  const { camera, scene, gl } = useThree();
+  const firstFrame = useRef(true);
   const world = useMemo(() => new World(kit), [kit]);
   const target = useMemo(() => new THREE.Vector3(), []);
   const on = useMemo(toggles, []);
@@ -83,6 +92,12 @@ const Inner: React.FC<{ id: number; kit: Kit }> = ({ id, kit }) => {
   fx.lens.cInf = d.cInf;
   gradeFor(fx.grade, SHOTS[id - 1].light);
   fx.grain.seed = f;
+  // The sun never moves and the set is static; only the bouncing deck and the flags change, and their shadows are
+  // soft. Re-rendering a 4096^2 shadow map of the whole world every frame was pure waste, so refresh it every other
+  // frame (and always on a canvas' first frame, so a crossfade layer never shows up shadowless).
+  gl.shadowMap.autoUpdate = false;
+  gl.shadowMap.needsUpdate = firstFrame.current || f % 2 === 0;
+  firstFrame.current = false;
   return (
     <>
       <primitive object={world.root} dispose={null} />
