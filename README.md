@@ -66,7 +66,8 @@ node tools/farm/agent.mjs --server=http://<this-pc-ip>:4000 --label="i7 / GT 710
 ```
 The agent prints the actual WebGL renderer string it got from the browser, and the dashboard shows
 which machine owns which chunk, with a Start button and a Stop button that finishes the current chunk
-and saves progress. Full guide: **[docs/FARM.md](docs/FARM.md)**.
+and saves progress. Full guide: **[docs/FARM.md](docs/FARM.md)** — adding any new machine:
+**[docs/ADD-WORKER-PC.md](docs/ADD-WORKER-PC.md)** (no installs needed).
 
 The 6-second hook showcase:
 ```bash

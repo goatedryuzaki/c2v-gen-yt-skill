@@ -26,6 +26,9 @@ Open `http://localhost:4000`. Press **Start** once you have workers connected.
 
 ## Each worker (no installs)
 
+> For a complete from-scratch walkthrough for any new PC — including dual-router setups, firewall,
+> and the troubleshooting table — see [ADD-WORKER-PC.md](ADD-WORKER-PC.md). The short version follows.
+
 1. Copy the project folder, including `node_modules`, to the worker PC
    (USB stick or network share is fine).
 2. Extract the portable Node ZIP anywhere, e.g. `C:\node`:
