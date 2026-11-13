@@ -54,6 +54,8 @@ as long as the browser reports a real adapter. `--gl=angle` is already set in `r
 ## How work is divided
 
 - chunks (default 25 frames) are handed to whichever worker asks first; faster machines take more
+- chunks whose frames already exist in `out/frames/` are skipped automatically, so pressing Start
+  never throws away finished work; to re-render, delete the frames or pass `--from` / `--to`
 - `out/frames/` on the coordinator fills up as chunks finish; encoding is unchanged:
   `npm run encode`
 - chunks that fail are not silently retried in a loop; the dashboard marks them `failed` and, once

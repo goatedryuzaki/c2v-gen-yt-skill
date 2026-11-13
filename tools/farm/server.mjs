@@ -309,6 +309,14 @@ const server = createServer(async (req, res) => {
     w.lastSeen = Date.now();
     if (!state.running) { w.status = 'idle'; return json(res, 200, { idle: true }); }
     if (state.stopping) { w.status = 'idle'; return json(res, 200, { stopped: true }); }
+    const disk = framesOnDisk();
+    for (const c of chunks) {
+      if (c.status !== 'pending') continue;
+      let all = true;
+      for (let f = c.from; f <= c.to; f++) if (!disk.has(f)) { all = false; break; }
+      // never re-render work that is already on disk untouched
+      if (all) { c.status = 'done'; c.worker = '(existing)'; }
+    }
     const next = chunks.find((c) => c.status === 'pending');
     if (!next) { w.status = 'idle'; return json(res, 200, { done: true }); }
     next.status = 'running';
