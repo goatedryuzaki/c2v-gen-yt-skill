@@ -40,12 +40,14 @@ if (missing.length) {
 }
 
 const ffmpeg = join('node_modules', '@remotion', 'compositor-win32-x64-msvc', 'ffmpeg.exe');
-// --delivery: same pixels, a fraction of the bitrate, so a weak CPU can decode it in real time.
-// crf 21 + a slower preset is smaller AND cleaner than crf 18 + veryfast, which is what a 53 Mbps
-// master with visible playback stutter is really telling you.
+// --delivery: same pixels, a bitrate a weak CPU can decode in real time. An HD 2500-class machine
+// decodes about 10-14 Mbps of 1080p30 x264 fine, but chokes at the 50+ Mbps the crf 18 veryfast
+// master produces -- which looked like "stuttering" on THIS machine, not a broken render.
 const delivery = process.argv.includes('--delivery');
 const preset = arg('preset', delivery ? 'medium' : 'veryfast');
-const crf = arg('crf', delivery ? '21' : '18');
+const crf = arg('crf', delivery ? '23' : '18');
+const maxrate = arg('maxrate', delivery ? '14M' : null);
+const bufsize = arg('bufsize', delivery ? '28M' : null);
 const audio = arg('audio', join('public', 'bridge_voiceover.wav'));
 const out = arg('out', join('out', delivery ? 'final_web.mp4' : 'final.mp4'));
 
@@ -58,13 +60,13 @@ const args = [
   '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
   '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
   '-c:v', 'libx264', '-preset', preset, '-crf', crf, '-pix_fmt', 'yuv420p',
-  ...(delivery ? ['-profile:v', 'high', '-level', '4.1'] : []),
+  ...(delivery && maxrate ? ['-profile:v', 'high', '-level', '4.1', '-maxrate', maxrate, '-bufsize', bufsize] : []),
   ...(existsSync(audio) ? ['-c:a', 'aac', '-b:a', '192k'] : []),
   // Deliberately no -shortest: the voiceover is 65.2 s and the film is 67.5 s (2025 frames), so
   // -shortest would trim the last 2.3 s of picture. Video decides the length; audio just ends first.
   '-movflags', '+faststart',
   out,
 ];
-console.log(`encoding ${last - first + 1} frames -> ${out}`);
+console.log(`encoding ${last - first + 1} frames -> ${out}${delivery ? `  (delivery: crf ${crf}, ${preset} preset, capped at ${maxrate} -- smooth on a 2-core i3)` : ''}`);
 execFileSync(ffmpeg, args, { stdio: 'inherit' });
 console.log('done');

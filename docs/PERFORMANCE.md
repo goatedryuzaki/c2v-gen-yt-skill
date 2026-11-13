@@ -113,8 +113,11 @@ npm run frames -- --from=0 --to=2024 --chunk=25
 npm run frames -- --from=0 --to=2024 --chunk=25 --scale=0.5
 
 # 4. Encode + mux the voiceover (cheap; re-run after any cut or audio change)
-npm run encode
-#    -> out/final.mp4  (h264, crf 18, +faststart)
+npm run encode          # full-quality master, out/final.mp4
+node tools/encode.mjs --delivery
+#    -> out/final_web.mp4  (crf 23, medium preset, capped at 14 Mbps, bt709)
+#    A 1080x1920 crf 18 master is ~50 Mbps and stutters on a 2-core i3;
+#    this one plays smoothly on the machine that rendered it.
 ```
 
 Cost of each step on this machine:
